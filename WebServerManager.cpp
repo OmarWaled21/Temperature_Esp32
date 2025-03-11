@@ -28,10 +28,10 @@ void startWebServer() {
       String userId = server.arg("plain");
       Serial.printf("📥 Received User ID: %s\n", userId.c_str());
 
-      saveUserIdToSD(userId);
-      // تأكيد الحفظ
-      String checkUserId = getUserIdFromSD();
+      saveStringPreference("user", "user_id", userId);
 
+      // تأكيد الحفظ
+      String checkUserId = getStringPreference("user", "user_id");
       Serial.printf("✅ Saved User ID: %s\n", checkUserId.c_str());
 
       server.send(200, "text/plain", "User ID saved");
@@ -49,16 +49,14 @@ void startWebServer() {
   Serial.println("🌍 Web server started");
 }
 
-void handleWebServer(){
+void handleWebServer() {
   server.handleClient();
 }
 
 void handleReset() {
-  removeUserIdFromSD();
-
+  removePreference("user", "user_id");
 
   server.send(200, "text/html", "<h1>Wi-Fi Resetting...</h1><p>ESP32 will restart.</p>");
   delay(2000);
   clearWifiCredentials();
 }
-

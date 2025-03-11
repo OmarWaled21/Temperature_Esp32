@@ -16,20 +16,15 @@ void handleBluetoothData() {
       Serial.println("SSID: " + ssid);
       Serial.println("Password: " + password);
 
-      if (saveWiFiCredentialsToSD(ssid, password)) {
-        SerialBT.println("✅ Credentials saved to SD Card. Restarting...");
-        delay(2000);
-        ESP.restart();
-      } else {
-        SerialBT.println("❌ Failed to save Wi-Fi credentials to SD Card.");
-      }
+      saveStringPreference("wifi", "ssid", ssid);
+      saveStringPreference("wifi", "password", password);
+
+      SerialBT.println("✅ Credentials saved. Restarting...");
+      delay(2000);
+      ESP.restart();
     } else if (data == "RESET") {
       SerialBT.println("⚠ Resetting Wi-Fi credentials...");
-      if (clearWiFiCredentialsFromSD()) {
-        SerialBT.println("✅ Wi-Fi credentials cleared.");
-      } else {
-        SerialBT.println("⚠ No Wi-Fi credentials to delete.");
-      }
+      clearWifiCredentials();
     } else {
       SerialBT.println("❌ Invalid format. Use: SSID:<ssid>PASS:<password>");
     }
@@ -37,6 +32,29 @@ void handleBluetoothData() {
 }
 
 void initBtSerial() {
-  SerialBT.begin("ESP32_Config");
-  Serial.println("\n===== ESP32 Initialization =====");
+  if (isBlueToothActivate) return; // Prevent reinitialization
+
+  if (!SerialBT.begin("ESP32_Config")) {
+    Serial.println("❌ Bluetooth initialization failed");
+  } else {
+    isBlueToothActivate = true; // Update global flag
+    Serial.println("\n===== ESP32 Initialization =====");
+  }
+}
+
+void checkBluetoothHealth() {
+  if (!isBlueToothActivate && SerialBT.available()) {
+    Serial.println("🔄 Reinitializing Bluetooth...");
+    SerialBT.end();
+    delay(200);
+    initBtSerial();
+  }
+}
+
+void activateBluetooth() {
+  if (!isBlueToothActivate) {
+    SerialBT.begin("ESP32_Config");
+    isBlueToothActivate = true;
+    Serial.println("🔵 Bluetooth activated");
+  }
 }

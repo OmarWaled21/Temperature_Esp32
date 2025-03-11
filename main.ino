@@ -5,44 +5,29 @@
 #include <Utilities.h>
 #include <UDPManager.h>
 #include <temperature_sensor.h>
-#include <RTC.h>
-#include <LCD.h>
 #include <Globals.h>
+#include <RTC.h>
+// #include <Globals.h>
 
 void setup() {
   Serial.begin(115200);
 
-  setupRTC();
+  // Initialize RTC module
+  initRTC();
 
-  // 🔹 Initialize SD Card
-  if (!initSDCard()) {
-    Serial.println("⚠ SD Card unavailable, skipping operations.");
-    return;
+// Check for existing credentials before initializing Bluetooth
+  bool hasCredentials = getStringPreference("wifi", "ssid").length() > 0;
+
+  // Only initialize Bluetooth if no credentials exist
+  if (!hasCredentials) {
+    initBtSerial();
   }
 
-  initBtSerial();
-  
-  delay(500);
-  
-  initLcd();
-  
-  delay(500);
-
-  connectingWiFiLcd();
-
-  delay(500);
-  
-  connectToWiFi();
- 
-
-  connectedToWiFiLcd();
-
+  // Set up the temperature sensor (replace this with your actual sensor setup)
   sensorSetUp();
-  delay(500);
-  initUDP();
 
-  delay(2000);
-  lcdClear();
+  // Connect to Wi-Fi
+  connectToWiFi();
 }
 
 void loop() {
@@ -51,14 +36,12 @@ void loop() {
     handleUDP();
 
     // Simulate temperature readings
-    String userId = getUserIdFromSD();
-    String deviceId = getDeviceIdFromSD();
+    String userId =  getStringPreference("user", "user_id");
+    String deviceId =  getStringPreference("user", "device_id");
 
     Serial.print("User ID: ");
     Serial.println(userId);
     Serial.println(deviceId);
-
-    showUserAndDeviceIdLcd(userId,deviceId);
 
     // If userId not found, start a timer and call handleReset() after 1 minute
     static unsigned long userIdNotFoundStart = 0;
@@ -68,10 +51,6 @@ void loop() {
         userIdNotFoundStart = millis();
       } else if (millis() - userIdNotFoundStart >= 60000) {
         Serial.println("❌ User ID not found for 1 minute, resetting Wi-Fi credentials...");
-        
-        noUserIdLcd();
-        delay(2000);
-
         handleReset();
         // Reset timer after calling handleReset
         userIdNotFoundStart = 0;
@@ -85,19 +64,17 @@ void loop() {
 
       sendTemperatureToFirestore(temperature, humidity);
 
-      showDataLcd(temperature, humidity);
-
       int durationMinutes = getDeviceDuration();
       int durationMillis = durationMinutes * 60 * 1000;  // Convert to milliseconds
 
-      String now = RTCNowString();
-
-      Serial.printf("%s\n", now.c_str());
+      // Print the next reading duration to the serial monitor
+      Serial.printf("⏳ Next reading in %d minutes...\n", durationMinutes);
 
       delay(durationMillis);
     }
     delay(500);
   } else {
+    checkBluetoothHealth();
     handleBluetoothData();
   }
 }

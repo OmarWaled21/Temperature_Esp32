@@ -17,9 +17,9 @@ void sendTemperatureToFirestore(float temperature, float humidity) {
     return;
   }
 
-  String userId = getUserIdFromSD();
-  String deviceId = getDeviceIdFromSD();
-
+  String userId = getStringPreference("user", "user_id");
+  String deviceId = getStringPreference("user", "device_id");
+  
   if (userId.isEmpty() || deviceId.isEmpty()) {
     Serial.println("❌ Error: User ID or Device ID is missing!");
     return;
@@ -33,7 +33,7 @@ void sendTemperatureToFirestore(float temperature, float humidity) {
   String url = String(FIREBASE_URL) + "/users_admin/" + userId + "/devices/" + deviceId + "/temperatures?key=" + API_KEY;
 
   // Get the current timestamp in ISO 8601 format
-  String timestamp = RTCNowString();
+  String timestamp = RTCTimestamp();
   if (timestamp == "") {
     Serial.println("❌ Error: Failed to get timestamp");
     return;
@@ -70,8 +70,8 @@ int getDeviceDuration() {
     return -1;
   }
 
-  String userId = getUserIdFromSD();
-  String deviceId = getDeviceIdFromSD();
+  String userId = getStringPreference("user", "user_id");
+  String deviceId = getStringPreference("user", "device_id");
 
   if (userId.isEmpty() || deviceId.isEmpty()) {
     Serial.println("❌ Error: User ID or Device ID is missing!");
@@ -118,9 +118,9 @@ int getDeviceDuration() {
       Serial.print("✅ Retrieved Duration: ");
       Serial.println(duration);
 
-      // Save duration to SD Card
-      saveDurationToSD(duration);
-      Serial.println("💾 Duration saved in SD Card.");
+      // Save duration to preferences
+      saveIntPreference("user", "duration", duration);
+      Serial.println("💾 Duration saved in preferences.");
 
       http.end();
       return duration;

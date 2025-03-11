@@ -1,5 +1,5 @@
-#include <WiFi.h>
-#include <BluetoothSerial.h>
+#include "UDPManager.h"
+#include <WiFiManager.h>
 #include <Globals.h>
 #include <WebServerManager.h>
 
@@ -7,27 +7,19 @@ const int MAX_CONNECTION_ATTEMPTS = 15;
 const int UDP_PORT = 12345;
 
 void clearWifiCredentials() {
-  Serial.println("⚠ Clearing Wi-Fi credentials...");
-  clearWiFiCredentialsFromSD(); // Clear credentials from SD card
-  WiFi.disconnect(true, true);  // Clear Wi-Fi settings from ESP32's NVS
+  removePreference("wifi", "ssid");
+  removePreference("wifi", "password");
+
+  WiFi.disconnect(true, true);
   delay(500);
+
   Serial.println("\n🚀 Restarting ESP32...");
   ESP.restart();
 }
 
-void activateBluetooth() {
-  if (!SerialBT.hasClient()) {
-    SerialBT.begin("ESP32_Config"); // Start Bluetooth with a device name
-    Serial.println("🔵 Bluetooth activated for configuration");
-  }
-}
-
 void connectToWiFi() {
-  Serial.println("\n📶 Calling connectToWiFi()...");
-
-  String savedSSID, savedPassword;
-  bool credentialsLoaded = loadWiFiCredentialsFromSD(savedSSID, savedPassword);
-  Serial.printf("📂 Credentials Loaded: %d | SSID: %s | Password: %s\n", credentialsLoaded, savedSSID.c_str(), savedPassword.c_str());
+  String savedSSID = getStringPreference("wifi", "ssid");
+  String savedPassword = getStringPreference("wifi", "password");
 
   if (savedSSID.length() > 0) {
     Serial.println("\n📡 Found saved Wi-Fi credentials");
@@ -47,25 +39,17 @@ void connectToWiFi() {
       Serial.println(WiFi.localIP());
 
       // Initialize network services
-      if (udp.begin(UDP_PORT)) {
-        Serial.println("UDP service started");
-      } else {
-        Serial.println("Failed to start UDP service");
-      }
+      initUDP();
 
-      // Deactivate Bluetooth if active
-      if (SerialBT.hasClient()) {
-        SerialBT.end();
-        Serial.println("🔵 Bluetooth deactivated");
-      }
-
-      startWebServer(); // Start the web server
+      SerialBT.end();
+      isBlueToothActivate = false;
+      startWebServer();
     } else {
       Serial.println("\n❌ Failed to connect to WiFi");
-      activateBluetooth(); // Fallback to Bluetooth
+      activateBluetooth();
     }
   } else {
     Serial.println("\n🔵 No saved Wi-Fi credentials");
-    activateBluetooth(); // Fallback to Bluetooth
+    activateBluetooth();
   }
 }
