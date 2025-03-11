@@ -4,31 +4,35 @@
 RTC_DS3231 rtc;
 
 void initRTC() {
-    Wire.begin();
-    
-    if (!rtc.begin()) {
-        Serial.println("❌ RTC module not found!");
-        return;
-    }
+  Wire.begin();
+  Serial.println("✅ RTC module initialized!");
 
-    if (rtc.lostPower()) {
-        Serial.println("⚠ RTC lost power, setting to compile time...");
-        rtc.adjust(DateTime(F(__DATE__), F(__TIME__))); // Set time to compilation time
-    }
+  if (!rtc.begin()) {
+    Serial.println("❌ RTC module not found!");
+    return;
+  }
+
+  if (rtc.lostPower()) {
+    Serial.println("⚠ RTC lost power, setting to compile time...");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));  // Set time to compilation time
+  }
 }
 
 String RTCTimestamp() {
-    DateTime now = rtc.now(); // Get RTC time (assumed to be in local time)
+  DateTime now = rtc.now();  // Get RTC time (assumed to be in local time)
 
-    // ✅ Convert Egypt time (UTC+2) to UTC before saving
-    now = now.unixtime() - (10 *60 - 42);  // Subtract 2 hours to get UTC
+  // Add 9 minutes and 42 seconds to compensate for drift
+  time_t adjustedTime = now.unixtime() + (9 * 60) + 42;  // Add 582 seconds
+  
+  // Convert Egypt time (UTC+2) to UTC
+  adjustedTime -= 2 * 3600;  // Subtract 2 hours
+  
+  DateTime utcTime = DateTime(adjustedTime);
 
-    DateTime utcTime = DateTime(now);
+  char timeString[30];
+  snprintf(timeString, sizeof(timeString), "%04d-%02d-%02dT%02d:%02d:%02dZ",
+           utcTime.year(), utcTime.month(), utcTime.day(),
+           utcTime.hour(), utcTime.minute(), utcTime.second());
 
-    char timeString[30];
-    snprintf(timeString, sizeof(timeString), "%04d-%02d-%02dT%02d:%02d:%02dZ",
-             utcTime.year(), utcTime.month(), utcTime.day(), 
-             utcTime.hour(), utcTime.minute(), utcTime.second());
-
-    return String(timeString);
+  return String(timeString);
 }
