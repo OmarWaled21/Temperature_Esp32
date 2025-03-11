@@ -5,6 +5,7 @@
 #include <BluetoothManager.h>
 #include <Utilities.h>
 #include <RTC.h>
+#include <SD_Module.h>
 
 void connectToWiFi();
 void clearWifiCredentials();

@@ -4,6 +4,7 @@
 #include <Utilities.h>
 
 WebServer server(80);
+const char* sd_csv_path = nullptr;
 
 void startWebServer() {
   // Configure server routes
@@ -12,7 +13,9 @@ void startWebServer() {
                 "<h1>ESP32 Wi-Fi Server</h1>"
                 "<p>Connected to Wi-Fi!</p>"
                 "<button onclick=\"fetch('/userid')\">Get User Id</button>"
-                "<button onclick=\"fetch('/reset')\">Reset Wi-Fi</button>");
+                "<button onclick=\"fetch('/reset')\">Reset Wi-Fi</button>"
+                "<button onclick=\"window.location.href='/data.csv'\">Download Data</button>");
+
   });
 
   server.on("/reset", handleReset);
@@ -40,6 +43,19 @@ void startWebServer() {
     }
   });
 
+  if (sd_csv_path) {
+    server.on("/data.csv", HTTP_GET, []() {
+      File dataFile = SD.open(sd_csv_path);
+      if (dataFile) {
+        server.sendHeader("Content-Type", "text/csv");
+        server.sendHeader("Content-Disposition", "attachment; filename=data.csv");
+        server.streamFile(dataFile, "text/csv");
+        dataFile.close();
+      } else {
+        server.send(500, "text/plain", "Error reading data file");
+      }
+    });
+  }
 
   server.onNotFound([]() {
     server.send(404, "text/plain", "Endpoint not found");
@@ -59,4 +75,8 @@ void handleReset() {
   server.send(200, "text/html", "<h1>Wi-Fi Resetting...</h1><p>ESP32 will restart.</p>");
   delay(2000);
   clearWifiCredentials();
+}
+
+void addSDCardHandler(const char* csvPath) {
+  sd_csv_path = csvPath;
 }

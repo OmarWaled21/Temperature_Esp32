@@ -8,6 +8,7 @@
 #include <Globals.h>
 #include <RTC.h>
 #include <LCD.h>
+#include <SD_Module.h>
 
 void setup() {
   Serial.begin(115200);
@@ -17,6 +18,18 @@ void setup() {
 
   // Initialize RTC module
   initRTC();
+
+  SD_Config sd_config = {
+    .csPin = 5,
+    .misoPin = 26,
+    .mosiPin = 25,
+    .sckPin = 33,
+    .filename = "/sensor_data.csv"
+  };
+  // Initialize SD Card
+  if (SD_init(sd_config)) {
+    addSDCardHandler(sd_config.filename);
+  }
 
   // Check for existing credentials before initializing Bluetooth
   bool hasCredentials = getStringPreference("wifi", "ssid").length() > 0;
@@ -72,6 +85,9 @@ void loop() {
       float temperature = roundf(measureTemperatureSensor() * 10) / 10;  // Replace with actual sensor data
       float humidity = random(40, 60);
 
+      // Log data
+      SD_appendData(RTCTimestamp(), temperature, humidity);
+
       sendTemperatureToFirestore(temperature, humidity);
 
       // 🔹 Display data on LCD
@@ -82,6 +98,10 @@ void loop() {
 
       // Print the next reading duration to the serial monitor
       Serial.printf("⏳ Next reading in %d minutes...\n", durationMinutes);
+
+
+      // //Handle web requests
+      // server.on("/data.csv", HTTP_GET, SD_handleCSVRequest);
 
       delay(durationMillis);
     }
